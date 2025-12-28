@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>安全登录系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            secondary: '#0FC6C2',
+            danger: '#F53F3F',
+            neutral: {
+              100: '#F2F3F5',
+              200: '#E5E6EB',
+              300: '#C9CDD4',
+              400: '#86909C',
+              500: '#4E5969',
+              600: '#272E3B',
+              700: '#1D2129',
+            }
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .card-shadow {
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
+      }
+      .input-focus {
+        @apply focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200;
+      }
+      .btn-hover {
+        @apply hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-neutral-100 to-neutral-200 min-h-screen font-inter flex items-center justify-center p-4">
+  <div class="w-full max-w-md">
+    <div class="bg-white rounded-2xl p-8 card-shadow transform transition-all duration-300 hover:shadow-xl">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
+          <i class="fa fa-lock text-2xl"></i>
+        </div>
+        <h1 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-neutral-700">安全登录</h1>
+        <p class="text-neutral-500 mt-2">使用您的账户信息登录</p>
+      </div>
+
+      <form id="login-form" class="space-y-5">
+        <div>
+          <label for="username" class="block text-sm font-medium text-neutral-700 mb-1">用户名</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-neutral-400">
+              <i class="fa fa-user"></i>
+            </span>
+            <input 
+              type="text" 
+              id="username" 
+              class="w-full pl-10 pr-4 py-3 rounded-lg border border-neutral-300 bg-neutral-50 text-neutral-700 input-focus outline-none"
+              placeholder="请输入用户名"
+              required
+            >
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label for="password" class="block text-sm font-medium text-neutral-700">密码</label>
+            <button type="button" id="toggle-password" class="text-sm text-primary hover:text-primary/80 transition-colors">
+              <i class="fa fa-eye-slash"></i> <span>显示</span>
+            </button>
+          </div>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-neutral-400">
+              <i class="fa fa-lock"></i>
+            </span>
+            <input 
+              type="password" 
+              id="password" 
+              class="w-full pl-10 pr-4 py-3 rounded-lg border border-neutral-300 bg-neutral-50 text-neutral-700 input-focus outline-none"
+              placeholder="请输入密码"
+              required
+            >
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          id="login-btn"
+          class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg btn-hover flex items-center justify-center"
+        >
+          <span>登录</span>
+          <i class="fa fa-spinner fa-spin ml-2 hidden" id="login-spinner"></i>
+        </button>
+      </form>
+
+      <div id="status-message" class="mt-6 hidden">
+        <div class="p-4 rounded-lg border-l-4 border-danger bg-danger/5 text-danger">
+          <div class="flex items-start">
+            <i class="fa fa-exclamation-circle mt-1 mr-3"></i>
+            <div>
+              <h4 class="font-medium">登录失败</h4>
+              <p id="error-message" class="text-sm mt-1">用户名或密码错误</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 text-center text-sm text-neutral-500">
+        <p>安全认证由 WebAssembly 提供</p>
+        <div id="wasm-status" class="mt-1 text-neutral-400">WASM 加载中...</div>
+      </div>
+    </div>
+
+    <div class="mt-6 text-center text-sm text-neutral-500">
+      <p>© 2025 安全登录系统 | <a href="#" class="text-primary hover:underline">隐私政策</a></p>
+    </div>
+  </div>
+  <script src="crypto-js.js"></script>
+  <script src="build/release.js"></script>
+  <script type="module">
+     import { authenticate } from "./build/release.js";
+    // 初始化 WASM 模块
+    async function initWasm() {
+      const wasmStatus = document.getElementById('wasm-status');
+      const loginForm = document.getElementById('login-form');
+      const loginBtn = document.getElementById('login-btn');
+      const loginSpinner = document.getElementById('login-spinner');
+      const statusMessage = document.getElementById('status-message');
+      const errorMessage = document.getElementById('error-message');
+      const passwordInput = document.getElementById('password');
+      const togglePasswordBtn = document.getElementById('toggle-password');
+      
+      try {
+
+        // 初始化完成
+        wasmStatus.textContent = 'WASM 已加载';
+        wasmStatus.classList.add('text-success');
+        
+        // 切换密码可见性
+        togglePasswordBtn.addEventListener('click', function() {
+          const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+          passwordInput.setAttribute('type', type);
+          
+          const icon = this.querySelector('i');
+          const text = this.querySelector('span');
+          
+          if (type === 'text') {
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+            text.textContent = '隐藏';
+          } else {
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+            text.textContent = '显示';
+          }
+        });
+        
+        // 登录表单提交处理
+        loginForm.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          
+          // 显示加载状态
+          loginBtn.disabled = true;
+          loginSpinner.classList.remove('hidden');
+          statusMessage.classList.add('hidden');
+          
+          try {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // 调用 WASM 中的 authenticate 函数
+            const authResult = authenticate(username, password);
+            const authData = JSON.parse(authResult);
+            
+            // 模拟发送到服务器
+            console.log('发送到服务器的数据:', authData);
+            
+            // 模拟服务器响应
+            simulateServerRequest(authData)
+              .then(response => {
+                if (response.success) {
+                  // 登录成功
+                  alert('登录成功！');
+                } else {
+                  // 登录失败
+                  showError(response.message || '登录失败，请重试');
+                }
+              })
+              .catch(error => {
+                console.error('登录错误:', error);
+                showError('网络错误，请稍后重试');
+              })
+              .finally(() => {
+                // 恢复按钮状态
+                loginBtn.disabled = false;
+                loginSpinner.classList.add('hidden');
+              });
+            
+          } catch (error) {
+            console.error('WASM 处理错误:', error);
+            showError('内部错误，请联系管理员');
+            
+            // 恢复按钮状态
+            loginBtn.disabled = false;
+            loginSpinner.classList.remove('hidden');
+          }
+        });
+        
+        // 显示错误消息
+        function showError(message) {
+          errorMessage.textContent = message;
+          statusMessage.classList.remove('hidden');
+          
+          // 添加动画效果
+          const errorBox = statusMessage.querySelector('div');
+          errorBox.classList.add('animate-shake');
+          setTimeout(() => {
+            errorBox.classList.remove('animate-shake');
+          }, 500);
+        }
+        
+        // 模拟服务器请求
+        function simulateServerRequest(data) {
+          return new Promise(resolve => {
+            // 模拟网络延迟
+            setTimeout(() => {
+              // 实际应用中这里应该是真实的 API 请求
+              // 这里仅作演示，使用本地判断
+              const check = CryptoJS.MD5(JSON.stringify(data)).toString(CryptoJS.enc.Hex);
+              if (check.startsWith("ccaf33e3512e31f3")){
+                resolve({ success: true });
+              }else{
+                resolve({ success: false });
+              }
+            }, 1000);
+          });
+        }
+        
+      } catch (error) {
+        console.error('WASM 加载失败:', error);
+        wasmStatus.textContent = 'WASM 加载失败';
+        wasmStatus.classList.add('text-danger');
+        
+        // 禁用登录按钮
+        loginBtn.disabled = true;
+        loginBtn.classList.add('bg-neutral-400');
+        loginBtn.classList.remove('bg-primary', 'hover:bg-primary/90');
+      }
+    }
+    
+    // 页面加载完成后初始化 WASM
+    window.addEventListener('load', initWasm);
+  </script>
+</body>
+</html>    
+
+<!-- 测试账号 admin 测试密码 admin-->

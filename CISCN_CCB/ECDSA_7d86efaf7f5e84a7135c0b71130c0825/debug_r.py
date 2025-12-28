@@ -1,0 +1,19 @@
+import binascii
+from hashlib import sha512
+
+n = 6864797660130609714981900799081393217269435300143305409394463459185543183397656052122559640661454554977296311391480858037121987999716643812574038204621746799
+sig0_hex = "01a76ff5e0a4490f314ab2a0650d4e9d6955fb154c39eeec2700fefac7b4aeef1230142b1466809d30bc61f32d9ce44757b604b09e211753032c28b64ef9327db44d00c9545bcb3def28828a7424c03d5b688b7ea0581372d9efc417724ab6624244dae9283789a7d7a2f8c2f820fc032dec0c3c2363f2b759e81248f75110344cd13c26"
+sig0 = binascii.unhexlify(sig0_hex)
+
+r = int.from_bytes(sig0[:66], "big")
+s = int.from_bytes(sig0[66:], "big")
+
+print(f"n: {n}")
+print(f"r: {r}")
+print(f"s: {s}")
+
+import math
+print(f"gcd(r, n): {math.gcd(r, n)}")
+
+if r >= n:
+    print("r is greater than or equal to n!")
